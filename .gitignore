@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# IDE
+/.vscode
+/.idea
+
+# Env files (refuerzo por si existen en la raíz o en frontend/)
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
