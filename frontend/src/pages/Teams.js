@@ -78,7 +78,7 @@ export default function Teams() {
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!selectedProfileId) return;
-    await api.post(`/teams/${selectedTeam.id}/members`, { user_id: selectedProfileId });
+    await api.post(`/teams/${selectedTeam.id}/members`, { profile_id: selectedProfileId });
     fetchMembers(selectedTeam);
   };
 

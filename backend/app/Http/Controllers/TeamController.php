@@ -83,22 +83,22 @@ class TeamController extends Controller
         Team::findOrFail($id);
 
         $request->validate([
-            'user_id' => 'required|exists:profiles,id',
+            'profile_id' => 'required|exists:profiles,id',
         ]);
 
         $exists = TeamMember::where('team_id', $id)
-            ->where('user_id', $request->user_id)
+            ->where('user_id', $request->profile_id)
             ->exists();
 
         if ($exists) {
             return response()->json([
-                'errors' => ['user_id' => ['El usuario ya es miembro de este equipo']]
+                'errors' => ['profile_id' => ['El usuario ya es miembro de este equipo']]
             ], 422);
         }
 
         $member = TeamMember::create([
             'team_id' => $id,
-            'user_id' => $request->user_id,
+            'user_id' => $request->profile_id,
         ]);
 
         return response()->json($member->load('profile'), 201);
