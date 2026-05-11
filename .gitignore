@@ -1,14 +1,24 @@
+# Claude Code
+.claude/
+.clauderc
+.mcp.json
+CLAUDE.md
+
+# Environment variables
+backend/.env
+frontend/.env
+
+# Dependencies
+backend/vendor/
+frontend/node_modules/
+
+# IDE
+.vscode/
+.idea/
+
 # macOS
 .DS_Store
 
-# IDE
-/.vscode
-/.idea
-
-# Env files (refuerzo por si existen en la raíz o en frontend/)
-.env
-.env.*
-!.env.example
-
-# Logs
-*.log
+# Laravel generated files
+backend/storage/logs/*
+backend/bootstrap/cache/*
