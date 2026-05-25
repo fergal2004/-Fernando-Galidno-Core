@@ -2,7 +2,7 @@ services:
   - type: web
     name: task-manager-backend
     runtime: php
-    rootDir: task-manager/backend
+    rootDir: backend
     buildCommand: composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache
     startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
     envVars:
@@ -22,7 +22,7 @@ services:
   - type: web
     name: task-manager-frontend
     runtime: static
-    rootDir: task-manager/frontend
+    rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: build
     routes:
