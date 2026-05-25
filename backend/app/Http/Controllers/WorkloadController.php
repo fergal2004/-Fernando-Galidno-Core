@@ -38,14 +38,14 @@ class WorkloadController extends Controller
                 'id'             => $member->user_id,
                 'name'           => $member->profile->first_name . ' ' . $member->profile->last_name,
                 'email'          => $member->profile->email,
-                'total_tasks'    => (int) $stats->total_tasks,
-                'total_hours'    => $hours,
+                'tasks_count'    => (int) $stats->total_tasks,
+                'assigned_hours' => $hours,
                 'workload_level' => $hours <= 15 ? 'low' : ($hours <= 30 ? 'medium' : 'high'),
             ];
         });
 
-        $totalHours = $membersData->sum('total_hours');
-        $totalTasks = $membersData->sum('total_tasks');
+        $totalHours = $membersData->sum('assigned_hours');
+        $totalTasks = $membersData->sum('tasks_count');
         $count      = $membersData->count();
 
         $suggested = $membersData->isNotEmpty()
