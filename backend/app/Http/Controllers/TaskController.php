@@ -37,7 +37,7 @@ class TaskController extends Controller
             'due_date'        => 'nullable|date',
             'team_id'         => 'required|exists:teams,id',
             'assigned_to'     => 'required|exists:profiles,id',
-            'status'          => 'in:pending,completed',
+            'status'          => 'in:pending,in_progress,completed',
         ]);
 
         $memberExists = TeamMember::where('team_id', $request->team_id)
@@ -84,7 +84,7 @@ class TaskController extends Controller
             'due_date'        => 'nullable|date',
             'team_id'         => 'sometimes|exists:teams,id',
             'assigned_to'     => 'sometimes|exists:profiles,id',
-            'status'          => 'sometimes|in:pending,completed',
+            'status'          => 'sometimes|in:pending,in_progress,completed',
         ]);
 
         $teamId   = $request->team_id   ?? $task->team_id;

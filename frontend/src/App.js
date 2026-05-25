@@ -11,10 +11,12 @@ import Layout from './components/Layout';
 
 function App() {
   const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setLoading(false);
     });
 
     supabase.auth.onAuthStateChange((_event, session) => {
@@ -27,22 +29,22 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={
-          <ProtectedRoute session={session}>
+          <ProtectedRoute session={session} loading={loading}>
             <Layout><Dashboard /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/workload" element={
-          <ProtectedRoute session={session}>
+          <ProtectedRoute session={session} loading={loading}>
             <Layout><Workload /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/teams" element={
-          <ProtectedRoute session={session}>
+          <ProtectedRoute session={session} loading={loading}>
             <Layout><Teams /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/users" element={
-          <ProtectedRoute session={session}>
+          <ProtectedRoute session={session} loading={loading}>
             <Layout><Users /></Layout>
           </ProtectedRoute>
         } />

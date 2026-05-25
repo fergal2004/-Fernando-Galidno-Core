@@ -137,8 +137,12 @@ export default function Dashboard() {
 
   const toggleStatus = async (task) => {
     const nextStatus = STATUS_CYCLE[task.status] || 'pending';
-    await api.put(`/tasks/${task.id}`, { status: nextStatus });
-    fetchTasks();
+    try {
+      await api.put(`/tasks/${task.id}`, { status: nextStatus });
+      fetchTasks();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error al actualizar el estado de la tarea.');
+    }
   };
 
   const memberLabel = (m) => {

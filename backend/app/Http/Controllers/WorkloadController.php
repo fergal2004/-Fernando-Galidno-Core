@@ -48,7 +48,9 @@ class WorkloadController extends Controller
         $totalTasks = $membersData->sum('total_tasks');
         $count      = $membersData->count();
 
-        $suggested = $membersData->sortBy('total_hours')->first();
+        $suggested = $membersData->isNotEmpty()
+            ? $membersData->sortBy('total_hours')->first()
+            : null;
 
         return response()->json([
             'summary' => [
