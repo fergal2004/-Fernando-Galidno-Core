@@ -66,12 +66,21 @@ class TeamController extends Controller
                 ->selectRaw('count(*) as total_tasks, coalesce(sum(estimated_hours), 0) as total_hours')
                 ->first();
 
+            $hours = (float) $stats->total_hours;
+            $workloadLevel = match (true) {
+                $hours <= 15 => 'low',
+                $hours <= 30 => 'medium',
+                default      => 'high',
+            };
+
             return [
-                'id'          => $member->user_id,
-                'name'        => $member->profile->first_name . ' ' . $member->profile->last_name,
-                'email'       => $member->profile->email,
-                'total_tasks' => (int) $stats->total_tasks,
-                'total_hours' => (float) $stats->total_hours,
+                'id'             => $member->user_id,
+                'name'           => $member->profile->first_name . ' ' . $member->profile->last_name,
+                'email'          => $member->profile->email,
+                'total_tasks'    => (int) $stats->total_tasks,
+                'total_hours'    => $hours,
+                'assigned_hours' => $hours,
+                'workload_level' => $workloadLevel,
             ];
         });
 
