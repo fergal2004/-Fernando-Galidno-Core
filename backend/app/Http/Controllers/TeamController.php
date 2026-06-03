@@ -59,27 +59,36 @@ class TeamController extends Controller
 
         $teamMembers = TeamMember::where('team_id', $id)->with('profile')->get();
 
-        $result = $teamMembers->map(function ($member) use ($id) {
-            $stats = Task::where('assigned_to', $member->user_id)
-                ->where('team_id', $id)
-                ->where('status', '!=', 'completed')
-                ->selectRaw('count(*) as total_tasks, coalesce(sum(estimated_hours), 0) as total_hours')
-                ->first();
+        // Una sola query para todos los miembros en lugar de N queries en el loop
+        $taskStats = Task::where('team_id', $id)
+            ->where('status', '!=', 'completed')
+            ->selectRaw('assigned_to, count(*) as total_tasks, coalesce(sum(estimated_hours), 0) as total_hours')
+            ->groupBy('assigned_to')
+            ->get()
+            ->keyBy('assigned_to');
 
-            $hours = (float) $stats->total_hours;
+        $result = $teamMembers->map(function ($member) use ($taskStats) {
+            $stats  = $taskStats->get($member->user_id);
+            $hours  = $stats ? (float) $stats->total_hours : 0;
+            $tasks  = $stats ? (int) $stats->total_tasks : 0;
+            $capacity = (int) ($member->profile->weekly_hours_capacity ?? 40);
+            $loadPct  = $capacity > 0 ? round($hours / $capacity * 100) : 100;
+
             $workloadLevel = match (true) {
-                $hours <= 15 => 'low',
-                $hours <= 30 => 'medium',
-                default      => 'high',
+                $loadPct < 40  => 'low',
+                $loadPct <= 70 => 'medium',
+                default        => 'high',
             };
 
             return [
                 'id'             => $member->user_id,
                 'name'           => $member->profile->first_name . ' ' . $member->profile->last_name,
                 'email'          => $member->profile->email,
-                'total_tasks'    => (int) $stats->total_tasks,
+                'total_tasks'    => $tasks,
                 'total_hours'    => $hours,
                 'assigned_hours' => $hours,
+                'capacity'       => $capacity,
+                'workload_pct'   => $loadPct,
                 'workload_level' => $workloadLevel,
             ];
         });

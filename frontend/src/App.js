@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Workload from './pages/Workload';
 import Teams from './pages/Teams';
 import Users from './pages/Users';
+import Projects from './pages/Projects';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -46,6 +47,11 @@ function App() {
         <Route path="/users" element={
           <ProtectedRoute session={session} loading={loading}>
             <Layout><Users /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/projects" element={
+          <ProtectedRoute session={session} loading={loading}>
+            <Layout><Projects /></Layout>
           </ProtectedRoute>
         } />
       </Routes>

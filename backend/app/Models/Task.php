@@ -20,7 +20,13 @@ class Task extends Model
         'assigned_to',
         'created_by',
         'team_id',
+        'project_id',
     ];
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
 
     public function assignee()
     {

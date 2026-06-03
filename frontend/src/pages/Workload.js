@@ -13,6 +13,7 @@ const PRIORITY_COLORS = {
 };
 const LOAD_COLORS  = { low: '#4CAF50', medium: '#FF9800', high: '#F44336' };
 const LOAD_LABELS  = { low: 'Baja', medium: 'Media', high: 'Alta' };
+const LOAD_BADGE_BG = { low: '#E8F5E9', medium: '#FFF3E0', high: '#FDECEA' };
 const STATUS_LABELS = {
   pending:     'Pendiente',
   in_progress: 'En progreso',
@@ -33,12 +34,15 @@ export default function Workload() {
   const [weekStart,   setWeekStart]   = useState(
     () => startOfWeek(new Date(), { weekStartsOn: 1 }),
   );
-  const [members,     setMembers]     = useState([]);
-  const [tasks,       setTasks]       = useState([]);
-  const [summary,     setSummary]     = useState(null);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState(null);
+  const [members,      setMembers]      = useState([]);
+  const [tasks,        setTasks]        = useState([]);
+  const [summary,      setSummary]      = useState(null);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [suggestions,  setSuggestions]  = useState([]);
+  const [assignState,  setAssignState]  = useState({});
+  // assignState key: `${user_id}_${project_id}` → { open, selectedTaskId, loading, done }
 
   // Cargar lista de equipos al montar
   useEffect(() => {
@@ -52,18 +56,21 @@ export default function Workload() {
     const start = format(weekStartDate,            'yyyy-MM-dd');
     const end   = format(addDays(weekStartDate, 6), 'yyyy-MM-dd');
     try {
-      const [workloadRes, tasksRes] = await Promise.all([
-        api.get('/workload', { params: { team_id: teamId, start_date: start, end_date: end } }),
-        api.get('/tasks',    { params: { team_id: teamId, start_date: start, end_date: end } }),
+      const [workloadRes, tasksRes, suggestionsRes] = await Promise.all([
+        api.get('/workload',    { params: { team_id: teamId, start_date: start, end_date: end } }),
+        api.get('/tasks',       { params: { team_id: teamId, start_date: start, end_date: end } }),
+        api.get('/suggestions', { params: { team_id: teamId } }),
       ]);
       setSummary(workloadRes.data.summary);
       setMembers(workloadRes.data.members ?? []);
       setTasks(tasksRes.data ?? []);
+      setSuggestions(suggestionsRes.data ?? []);
     } catch {
       setError('Error al cargar los datos. Intenta de nuevo.');
       setSummary(null);
       setMembers([]);
       setTasks([]);
+      setSuggestions([]);
     } finally {
       setLoading(false);
     }
@@ -155,6 +162,139 @@ export default function Workload() {
             <SummaryCard label="Horas Totales"      value={`${summary.total_hours ?? '-'} hrs`} />
             <SummaryCard label="Promedio por Persona" value={`${summary.average_hours ?? '-'} hrs`} />
           </div>
+
+          {/* ── Sugerencias de asignación ─────────────────────────────── */}
+          {suggestions.length > 0 && (
+            <div style={{ marginBottom: 28 }}>
+              <h3 style={{ color: THEME, marginBottom: 12, fontSize: 16 }}>Sugerencias de Asignación</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {suggestions.map(s => (
+                  <div
+                    key={s.user_id}
+                    style={{
+                      background: '#f0f9f0',
+                      border: '1px solid #4CAF50',
+                      borderRadius: 8,
+                      padding: '14px 16px',
+                    }}
+                  >
+                    {/* Cabecera: nombre + carga + skills */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: 700, fontSize: 14, color: '#222' }}>{s.name}</span>
+                      <span style={{
+                        background: LOAD_BADGE_BG.low,
+                        color: LOAD_COLORS.low,
+                        border: `1px solid ${LOAD_COLORS.low}`,
+                        fontSize: 11, fontWeight: 700,
+                        padding: '1px 8px', borderRadius: 10,
+                      }}>
+                        Baja carga — {s.workload_pct}%
+                      </span>
+                      <span style={{ fontSize: 12, color: '#666' }}>
+                        {s.assigned_hours}h / {s.capacity}h semanales
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#555', marginBottom: 10 }}>
+                      <strong>Skills:</strong> {s.skills.join(', ')}
+                    </div>
+
+                    {/* Proyectos con botón Asignar */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {s.matching_projects.map(p => {
+                        const key = `${s.user_id}_${p.id}`;
+                        const st  = assignState[key] || {};
+                        return (
+                          <div
+                            key={p.id}
+                            style={{
+                              background: '#fff',
+                              border: '1px solid #2196F3',
+                              borderRadius: 6,
+                              padding: '10px 12px',
+                            }}
+                          >
+                            {/* Fila superior: info + botón Asignar */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                              <div>
+                                <span style={{ fontWeight: 600, fontSize: 13, color: '#1565C0' }}>{p.name}</span>
+                                <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>
+                                  ({p.practice}) — {p.pending_tasks_count} tarea{p.pending_tasks_count !== 1 ? 's' : ''} pendiente{p.pending_tasks_count !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                              {!st.done && !st.open && (
+                                <button
+                                  onClick={() => setAssignState(prev => ({
+                                    ...prev,
+                                    [key]: { open: true, selectedTaskId: p.pending_tasks[0]?.id || '', loading: false, done: false },
+                                  }))}
+                                  style={{
+                                    background: THEME, color: '#fff', border: 'none',
+                                    padding: '5px 14px', borderRadius: 5, cursor: 'pointer',
+                                    fontSize: 13, fontWeight: 600,
+                                  }}
+                                >
+                                  Asignar
+                                </button>
+                              )}
+                              {st.done && (
+                                <span style={{ fontSize: 13, color: '#4CAF50', fontWeight: 700 }}>✓ Asignado</span>
+                              )}
+                            </div>
+
+                            {/* Panel expandible de selección */}
+                            {st.open && !st.done && (
+                              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <select
+                                  value={st.selectedTaskId}
+                                  onChange={e => setAssignState(prev => ({
+                                    ...prev,
+                                    [key]: { ...prev[key], selectedTaskId: e.target.value },
+                                  }))}
+                                  style={{ flex: 1, minWidth: 200, padding: '6px 10px', border: '1px solid #ccd0da', borderRadius: 5, fontSize: 13 }}
+                                >
+                                  {p.pending_tasks.map(t => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.title} — {t.estimated_hours}h ({t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Media' : 'Baja'})
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  disabled={st.loading || !st.selectedTaskId}
+                                  onClick={async () => {
+                                    setAssignState(prev => ({ ...prev, [key]: { ...prev[key], loading: true } }));
+                                    try {
+                                      await api.put(`/tasks/${st.selectedTaskId}`, { assigned_to: s.user_id });
+                                      setAssignState(prev => ({ ...prev, [key]: { open: false, done: true, loading: false, selectedTaskId: '' } }));
+                                      fetchData(filterTeam, weekStart);
+                                    } catch {
+                                      setAssignState(prev => ({ ...prev, [key]: { ...prev[key], loading: false } }));
+                                    }
+                                  }}
+                                  style={{
+                                    background: '#4CAF50', color: '#fff', border: 'none',
+                                    padding: '6px 16px', borderRadius: 5, cursor: st.loading ? 'wait' : 'pointer',
+                                    fontSize: 13, fontWeight: 600,
+                                  }}
+                                >
+                                  {st.loading ? 'Asignando…' : 'Confirmar'}
+                                </button>
+                                <button
+                                  onClick={() => setAssignState(prev => ({ ...prev, [key]: { open: false, done: false, loading: false, selectedTaskId: '' } }))}
+                                  style={{ background: '#e0e0e0', color: '#333', border: 'none', padding: '6px 12px', borderRadius: 5, cursor: 'pointer', fontSize: 13 }}
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Calendario por recurso ────────────────────────────────── */}
           <div style={{ overflowX: 'auto' }}>
@@ -253,7 +393,7 @@ function MemberRow({ member, weekDays, tasksForCell, onTaskClick, isEven }) {
             {LOAD_LABELS[member.workload_level] || member.workload_level}
           </span>
           <span style={{ fontSize: 11, color: '#888' }}>
-            {member.assigned_hours} hrs
+            {member.assigned_hours}h / {member.capacity ?? 40}h ({member.workload_pct ?? 0}%)
           </span>
         </div>
       </div>

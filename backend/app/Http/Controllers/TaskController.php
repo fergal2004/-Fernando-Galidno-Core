@@ -10,7 +10,7 @@ class TaskController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Task::with(['assignee', 'team']);
+        $query = Task::with(['assignee', 'team', 'project']);
 
         if ($request->team_id) {
             $query->where('team_id', $request->team_id);
@@ -38,6 +38,7 @@ class TaskController extends Controller
             'team_id'         => 'required|exists:teams,id',
             'assigned_to'     => 'required|exists:profiles,id',
             'status'          => 'in:pending,in_progress,completed',
+            'project_id'      => 'nullable|exists:projects,id',
         ]);
 
         $memberExists = TeamMember::where('team_id', $request->team_id)
@@ -61,14 +62,15 @@ class TaskController extends Controller
             'status'          => $request->status ?? 'pending',
             'user_id'         => $request->user_id,
             'created_by'      => $request->user_id,
+            'project_id'      => $request->project_id,
         ]);
 
-        return response()->json($task->load(['assignee', 'team']), 201);
+        return response()->json($task->load(['assignee', 'team', 'project']), 201);
     }
 
     public function show(Request $request, $id)
     {
-        $task = Task::with(['assignee', 'team'])->findOrFail($id);
+        $task = Task::with(['assignee', 'team', 'project'])->findOrFail($id);
         return response()->json($task);
     }
 
@@ -85,6 +87,7 @@ class TaskController extends Controller
             'team_id'         => 'sometimes|exists:teams,id',
             'assigned_to'     => 'sometimes|exists:profiles,id',
             'status'          => 'sometimes|in:pending,in_progress,completed',
+            'project_id'      => 'nullable|exists:projects,id',
         ]);
 
         $teamId   = $request->team_id   ?? $task->team_id;
@@ -104,10 +107,10 @@ class TaskController extends Controller
 
         $task->update($request->only([
             'title', 'description', 'priority', 'estimated_hours',
-            'due_date', 'team_id', 'assigned_to', 'status',
+            'due_date', 'team_id', 'assigned_to', 'status', 'project_id',
         ]));
 
-        return response()->json($task->load(['assignee', 'team']));
+        return response()->json($task->load(['assignee', 'team', 'project']));
     }
 
     public function destroy(Request $request, $id)

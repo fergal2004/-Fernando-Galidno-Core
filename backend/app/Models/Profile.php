@@ -15,7 +15,13 @@ class Profile extends Model
         'last_name',
         'email',
         'role',
+        'weekly_hours_capacity',
     ];
+
+    public function skills()
+    {
+        return $this->belongsToMany(Skill::class, 'user_skills', 'user_id', 'skill_id');
+    }
 
     public function teamMembers()
     {

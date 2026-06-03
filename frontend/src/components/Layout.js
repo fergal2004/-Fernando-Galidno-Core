@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient';
 
 const NAV_LINKS = [
   ['Tareas', '/'],
+  ['Proyectos', '/projects'],
   ['Carga de Trabajo', '/workload'],
   ['Equipos', '/teams'],
   ['Usuarios', '/users'],

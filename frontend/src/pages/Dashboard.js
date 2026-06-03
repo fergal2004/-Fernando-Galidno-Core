@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [teams, setTeams] = useState([]);
   const [members, setMembers] = useState([]);
+  const [projects, setProjects] = useState([]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -34,6 +35,7 @@ export default function Dashboard() {
   const [dueDate, setDueDate] = useState('');
   const [selectedTeam, setSelectedTeam] = useState('');
   const [selectedMember, setSelectedMember] = useState('');
+  const [selectedProject, setSelectedProject] = useState('');
 
   const [editingId, setEditingId] = useState(null);
   const [formError, setFormError] = useState(null);
@@ -47,6 +49,12 @@ export default function Dashboard() {
   const fetchTeams = async () => {
     const { data } = await api.get('/teams');
     setTeams(data);
+  };
+
+  const fetchProjects = async (teamId) => {
+    if (!teamId) { setProjects([]); return; }
+    const { data } = await api.get('/projects', { params: { team_id: teamId } });
+    setProjects(data);
   };
 
   useEffect(() => {
@@ -69,15 +77,18 @@ export default function Dashboard() {
   const handleTeamChange = (value) => {
     setSelectedTeam(value);
     setSelectedMember('');
+    setSelectedProject('');
     setMembers([]);
+    setProjects([]);
     loadMembers(value);
+    fetchProjects(value);
   };
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setPriority('medium');
     setEstimatedHours(''); setDueDate('');
-    setSelectedTeam(''); setSelectedMember('');
-    setMembers([]); setEditingId(null); setFormError(null);
+    setSelectedTeam(''); setSelectedMember(''); setSelectedProject('');
+    setMembers([]); setProjects([]); setEditingId(null); setFormError(null);
   };
 
   const handleSubmit = async (e) => {
@@ -91,6 +102,7 @@ export default function Dashboard() {
       due_date: dueDate || null,
       team_id: selectedTeam || null,
       assigned_to: selectedMember || null,
+      project_id: selectedProject || null,
     };
     try {
       if (editingId) {
@@ -126,8 +138,12 @@ export default function Dashboard() {
     const teamId = task.team_id || '';
     setSelectedTeam(teamId);
     setSelectedMember(task.assigned_to || '');
+    setSelectedProject(task.project_id || '');
     setMembers([]);
-    if (teamId) await loadMembers(teamId);
+    setProjects([]);
+    if (teamId) {
+      await Promise.all([loadMembers(teamId), fetchProjects(teamId)]);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -247,6 +263,25 @@ export default function Dashboard() {
                 </option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>{memberLabel(m)}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label style={labelStyle}>Proyecto</label>
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                disabled={!selectedTeam}
+                style={{ ...inputStyle, background: !selectedTeam ? '#f0f0f0' : undefined }}
+              >
+                <option value="">
+                  {!selectedTeam ? '-- Selecciona un equipo primero --' : '-- Sin proyecto --'}
+                </option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}{p.practice ? ` (${p.practice.name})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
