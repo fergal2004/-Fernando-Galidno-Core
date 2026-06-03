@@ -12,10 +12,81 @@ const THEME = '#2B579A';
 const STATUS_LABELS = { active: 'Activo', completed: 'Completado', on_hold: 'En pausa' };
 const STATUS_COLORS = { active: '#4CAF50', completed: '#2196F3', on_hold: '#FF9800' };
 
+function SkillDemandPanel({ projects, practices, skills }) {
+  // Cuenta proyectos activos por práctica
+  const countByPractice = projects.reduce((acc, p) => {
+    if (p.practice_id) {
+      acc[p.practice_id] = (acc[p.practice_id] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  // Construye lista de prácticas con demanda, ordenada de mayor a menor
+  const demandList = practices
+    .map(p => ({
+      ...p,
+      count: countByPractice[p.id] || 0,
+      skills: skills.filter(s => s.practice_id === p.id),
+    }))
+    .filter(p => p.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  if (demandList.length === 0) return null;
+
+  const maxCount = demandList[0].count;
+
+  const DEMAND_COLORS = ['#1565C0', '#0277BD', '#00838F', '#2E7D32', '#6A1B9A'];
+
+  return (
+    <div style={{ marginBottom: 24, background: '#f5f7fa', border: '1px solid #ddd', borderRadius: 8, padding: '16px 20px' }}>
+      <h3 style={{ margin: '0 0 14px', fontSize: 15, color: '#333' }}>
+        Demanda de Habilidades por Práctica
+      </h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {demandList.map((p, idx) => {
+          const color = DEMAND_COLORS[idx % DEMAND_COLORS.length];
+          const barWidth = Math.round((p.count / maxCount) * 100);
+          return (
+            <div key={p.id}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4, gap: 10 }}>
+                <span style={{ minWidth: 110, fontSize: 13, fontWeight: 700, color }}>{p.name}</span>
+                <div style={{ flex: 1, background: '#e0e0e0', borderRadius: 4, height: 10, overflow: 'hidden' }}>
+                  <div style={{ width: `${barWidth}%`, background: color, height: '100%', borderRadius: 4, transition: 'width 0.4s' }} />
+                </div>
+                <span style={{ fontSize: 12, color: '#555', minWidth: 80 }}>
+                  {p.count} proyecto{p.count !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {p.skills.length > 0 && (
+                <div style={{ paddingLeft: 120, display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {p.skills.map(s => (
+                    <span key={s.id} style={{
+                      background: color + '18',
+                      color,
+                      border: `1px solid ${color}44`,
+                      borderRadius: 12,
+                      padding: '2px 10px',
+                      fontSize: 12,
+                      fontWeight: 500,
+                    }}>
+                      {s.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Projects() {
   const [projects, setProjects] = useState([]);
   const [practices, setPractices] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [skills, setSkills] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -29,12 +100,14 @@ export default function Projects() {
   };
 
   const fetchCatalog = async () => {
-    const [practRes, teamsRes] = await Promise.all([
+    const [practRes, teamsRes, skillsRes] = await Promise.all([
       api.get('/practices'),
       api.get('/teams'),
+      api.get('/skills'),
     ]);
     setPractices(practRes.data);
     setTeams(teamsRes.data);
+    setSkills(skillsRes.data);
   };
 
   useEffect(() => {
@@ -188,6 +261,9 @@ export default function Projects() {
           ))}
         </select>
       </div>
+
+      {/* Panel de demanda de habilidades */}
+      <SkillDemandPanel projects={projects} practices={practices} skills={skills} />
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
