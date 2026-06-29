@@ -20,6 +20,9 @@ frontend/node_modules/
 # macOS
 .DS_Store
 
+# Entregables (no subir a GitHub)
+entregables/
+
 # Laravel generated files
 backend/storage/logs/*
 backend/bootstrap/cache/*
