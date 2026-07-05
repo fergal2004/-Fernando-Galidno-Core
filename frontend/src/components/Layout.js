@@ -7,6 +7,7 @@ const NAV_LINKS = [
   ['Carga de Trabajo', '/workload'],
   ['Equipos', '/teams'],
   ['Usuarios', '/users'],
+  ['Reporte', '/report'],
 ];
 
 export default function Layout({ children }) {

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\PracticeController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SkillController;
 use App\Http\Controllers\TaskController;
@@ -27,4 +28,6 @@ Route::middleware('supabase.auth')->group(function () {
 
     Route::get('workload',     [WorkloadController::class, 'index']);
     Route::get('suggestions',  [WorkloadController::class, 'suggestions']);
+
+    Route::get('reports/team/{id}', [ReportController::class, 'team']);
 });

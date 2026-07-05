@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Task;
 use App\Models\Team;
 use App\Models\TeamMember;
+use App\Services\WorkloadService;
 use Illuminate\Http\Request;
 
 class TeamController extends Controller
 {
+    public function __construct(private WorkloadService $workload)
+    {
+    }
+
     public function index()
     {
         return response()->json(Team::with('teamMembers.profile')->get());
@@ -53,45 +57,18 @@ class TeamController extends Controller
         return response()->json(['message' => 'Equipo eliminado']);
     }
 
+    // SRP: el cálculo de carga vive en WorkloadService (antes estaba duplicado aquí)
     public function members(Request $request, $id)
     {
         Team::findOrFail($id);
 
-        $teamMembers = TeamMember::where('team_id', $id)->with('profile')->get();
+        $data = $this->workload->membersWorkload($id, null, null);
 
-        // Una sola query para todos los miembros en lugar de N queries en el loop
-        $taskStats = Task::where('team_id', $id)
-            ->where('status', '!=', 'completed')
-            ->selectRaw('assigned_to, count(*) as total_tasks, coalesce(sum(estimated_hours), 0) as total_hours')
-            ->groupBy('assigned_to')
-            ->get()
-            ->keyBy('assigned_to');
-
-        $result = $teamMembers->map(function ($member) use ($taskStats) {
-            $stats  = $taskStats->get($member->user_id);
-            $hours  = $stats ? (float) $stats->total_hours : 0;
-            $tasks  = $stats ? (int) $stats->total_tasks : 0;
-            $capacity = (int) ($member->profile->weekly_hours_capacity ?? 40);
-            $loadPct  = $capacity > 0 ? round($hours / $capacity * 100) : 100;
-
-            $workloadLevel = match (true) {
-                $loadPct < 40  => 'low',
-                $loadPct <= 70 => 'medium',
-                default        => 'high',
-            };
-
-            return [
-                'id'             => $member->user_id,
-                'name'           => $member->profile->first_name . ' ' . $member->profile->last_name,
-                'email'          => $member->profile->email,
-                'total_tasks'    => $tasks,
-                'total_hours'    => $hours,
-                'assigned_hours' => $hours,
-                'capacity'       => $capacity,
-                'workload_pct'   => $loadPct,
-                'workload_level' => $workloadLevel,
-            ];
-        });
+        $result = collect($data['members'])->map(fn ($m) => $m + [
+            'total_tasks'  => $m['tasks_count'],
+            'active_tasks' => $m['tasks_count'],
+            'total_hours'  => $m['assigned_hours'],
+        ]);
 
         return response()->json($result->values());
     }

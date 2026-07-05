@@ -154,6 +154,8 @@ class WorkloadService
         return [
             'id'             => $member->user_id,
             'name'           => $member->profile->first_name . ' ' . $member->profile->last_name,
+            'first_name'     => $member->profile->first_name,
+            'last_name'      => $member->profile->last_name,
             'email'          => $member->profile->email,
             'assigned_hours' => $hours,
             'capacity'       => $capacity,

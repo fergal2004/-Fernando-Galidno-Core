@@ -12,8 +12,11 @@ const THEME = '#2B579A';
 const STATUS_LABELS = { active: 'Activo', completed: 'Completado', on_hold: 'En pausa' };
 const STATUS_COLORS = { active: '#4CAF50', completed: '#2196F3', on_hold: '#FF9800' };
 
+// Panel que muestra qué habilidades son más demandadas según cuántos proyectos
+// tiene cada práctica (Mobile, E-commerce, SMS, etc.)
 function SkillDemandPanel({ projects, practices, skills }) {
-  // Cuenta proyectos activos por práctica
+  // PASO 1: Contar cuántos proyectos pertenecen a cada práctica
+  // Resultado: { "id-practica": 3, "otro-id": 1, ... }
   const countByPractice = projects.reduce((acc, p) => {
     if (p.practice_id) {
       acc[p.practice_id] = (acc[p.practice_id] || 0) + 1;
@@ -21,20 +24,24 @@ function SkillDemandPanel({ projects, practices, skills }) {
     return acc;
   }, {});
 
-  // Construye lista de prácticas con demanda, ordenada de mayor a menor
+  // PASO 2: Cruzar prácticas con su conteo y sus habilidades asociadas,
+  // filtrar las que no tienen proyectos y ordenar de mayor a menor demanda
   const demandList = practices
     .map(p => ({
       ...p,
-      count: countByPractice[p.id] || 0,
-      skills: skills.filter(s => s.practice_id === p.id),
+      count: countByPractice[p.id] || 0,           // cuántos proyectos tiene
+      skills: skills.filter(s => s.practice_id === p.id), // habilidades de esa práctica
     }))
-    .filter(p => p.count > 0)
-    .sort((a, b) => b.count - a.count);
+    .filter(p => p.count > 0)   // ocultar prácticas sin proyectos
+    .sort((a, b) => b.count - a.count); // mayor demanda primero
 
+  // Si ninguna práctica tiene proyectos, no mostrar el panel
   if (demandList.length === 0) return null;
 
+  // El primero de la lista tiene el mayor conteo — se usa para calcular el % de la barra
   const maxCount = demandList[0].count;
 
+  // Un color distinto por práctica para diferenciarlas visualmente
   const DEMAND_COLORS = ['#1565C0', '#0277BD', '#00838F', '#2E7D32', '#6A1B9A'];
 
   return (
@@ -45,6 +52,7 @@ function SkillDemandPanel({ projects, practices, skills }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {demandList.map((p, idx) => {
           const color = DEMAND_COLORS[idx % DEMAND_COLORS.length];
+          // PASO 3: Calcular el ancho de la barra proporcional al máximo (100% = práctica líder)
           const barWidth = Math.round((p.count / maxCount) * 100);
           return (
             <div key={p.id}>
@@ -100,6 +108,8 @@ export default function Projects() {
   };
 
   const fetchCatalog = async () => {
+    // Se traen prácticas, equipos y habilidades en paralelo
+    // Las habilidades son necesarias para el panel de demanda
     const [practRes, teamsRes, skillsRes] = await Promise.all([
       api.get('/practices'),
       api.get('/teams'),

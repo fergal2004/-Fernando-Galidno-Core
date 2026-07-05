@@ -26,3 +26,6 @@ entregables/
 # Laravel generated files
 backend/storage/logs/*
 backend/bootstrap/cache/*
+
+# Build artifacts
+frontend/build/
